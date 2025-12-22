@@ -72,8 +72,46 @@ function formatWeekLabel(weekStart: Date): string {
 }
 
 export function parseCSV(csvText: string): Activity[] {
-  const lines = csvText.split('\n');
-  const headers = lines[0].split(',');
+  // First, properly parse CSV handling multi-line quoted fields
+  const records: string[][] = [];
+  let currentRecord: string[] = [];
+  let currentField = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < csvText.length; i++) {
+    const char = csvText[i];
+    
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      currentRecord.push(currentField.trim());
+      currentField = '';
+    } else if ((char === '\n' || char === '\r') && !inQuotes) {
+      // Skip \r in \r\n
+      if (char === '\r' && csvText[i + 1] === '\n') continue;
+      
+      currentRecord.push(currentField.trim());
+      if (currentRecord.length > 1) {
+        records.push(currentRecord);
+      }
+      currentRecord = [];
+      currentField = '';
+    } else {
+      currentField += char;
+    }
+  }
+  // Push last record
+  if (currentRecord.length > 0 || currentField) {
+    currentRecord.push(currentField.trim());
+    if (currentRecord.length > 1) {
+      records.push(currentRecord);
+    }
+  }
+  
+  if (records.length === 0) return [];
+  
+  // First record is headers
+  const headers = records[0];
   
   // Find column indices
   const idIdx = headers.findIndex(h => h.includes('Activity ID'));
@@ -82,7 +120,7 @@ export function parseCSV(csvText: string): Activity[] {
   const typeIdx = headers.findIndex(h => h.includes('Activity Type'));
   
   // Distance column (18th column based on the data structure, in meters)
-  const distanceIdx = 17; // The detailed Distance column in meters
+  const distanceIdx = 17;
   const elapsedTimeIdx = 15;
   const movingTimeIdx = 16;
   const elevationIdx = 20;
@@ -91,37 +129,27 @@ export function parseCSV(csvText: string): Activity[] {
   
   const activities: Activity[] = [];
   
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line.trim()) continue;
+  for (let i = 1; i < records.length; i++) {
+    const values = records[i];
     
-    // Parse CSV properly handling quoted fields
-    const values: string[] = [];
-    let current = '';
-    let inQuotes = false;
+    // Skip if doesn't start with a valid activity ID (number)
+    const activityId = values[idIdx];
+    if (!activityId || !/^\d+$/.test(activityId)) continue;
     
-    for (const char of line) {
-      if (char === '"') {
-        inQuotes = !inQuotes;
-      } else if (char === ',' && !inQuotes) {
-        values.push(current.trim());
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-    values.push(current.trim());
+    // Only include "Run" activities
+    const activityType = values[typeIdx] || '';
+    if (activityType !== 'Run') continue;
     
     const distanceMeters = parseFloat(values[distanceIdx]) || 0;
     const distanceKm = distanceMeters / 1000;
     
-    if (distanceKm <= 0) continue; // Skip activities with no distance
+    if (distanceKm <= 0) continue;
     
     activities.push({
-      id: values[idIdx] || String(i),
+      id: activityId,
       date: parseDate(values[dateIdx] || ''),
       name: values[nameIdx] || 'Unknown Activity',
-      type: values[typeIdx] || 'Unknown',
+      type: activityType,
       distanceKm,
       elapsedTime: parseFloat(values[elapsedTimeIdx]) || 0,
       movingTime: parseFloat(values[movingTimeIdx]) || 0,
