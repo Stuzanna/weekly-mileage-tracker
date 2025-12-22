@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { format } from "date-fns";
+import { format, subMonths, subWeeks, startOfYear } from "date-fns";
 import { CalendarIcon, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -10,12 +9,24 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
+type PresetKey = "3m" | "6m" | "ytd" | "1y" | "all";
+
+const presets: { key: PresetKey; label: string }[] = [
+  { key: "3m", label: "3 months" },
+  { key: "6m", label: "6 months" },
+  { key: "ytd", label: "Year to date" },
+  { key: "1y", label: "1 year" },
+  { key: "all", label: "All time" },
+];
+
 interface DateRangeFilterProps {
   startDate: Date | undefined;
   endDate: Date | undefined;
   onStartDateChange: (date: Date | undefined) => void;
   onEndDateChange: (date: Date | undefined) => void;
   onClear: () => void;
+  activePreset: PresetKey | null;
+  onPresetChange: (preset: PresetKey) => void;
   minDate?: Date;
   maxDate?: Date;
 }
@@ -26,6 +37,8 @@ export function DateRangeFilter({
   onStartDateChange,
   onEndDateChange,
   onClear,
+  activePreset,
+  onPresetChange,
   minDate,
   maxDate,
 }: DateRangeFilterProps) {
@@ -33,7 +46,22 @@ export function DateRangeFilter({
 
   return (
     <div className="flex flex-wrap items-center gap-3 p-4 bg-card rounded-lg border border-border/50 shadow-card">
-      <span className="text-sm font-medium text-muted-foreground">Filter by date:</span>
+      <div className="flex flex-wrap gap-2">
+        {presets.map((preset) => (
+          <Button
+            key={preset.key}
+            variant={activePreset === preset.key ? "default" : "outline"}
+            size="sm"
+            onClick={() => onPresetChange(preset.key)}
+          >
+            {preset.label}
+          </Button>
+        ))}
+      </div>
+
+      <div className="h-6 w-px bg-border/50 hidden sm:block" />
+
+      <span className="text-sm font-medium text-muted-foreground">Custom:</span>
       
       <Popover>
         <PopoverTrigger asChild>

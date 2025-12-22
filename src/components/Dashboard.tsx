@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { subMonths, startOfYear } from "date-fns";
 import { parseCSV, groupByWeek, calculateStats, Activity, WeekData } from "@/lib/parseActivities";
 import { StatCard } from "./StatCard";
 import { WeeklyChart } from "./WeeklyChart";
@@ -8,17 +9,53 @@ import { DateRangeFilter } from "./DateRangeFilter";
 import { MapPin, Calendar, Trophy, Zap, Flame } from "lucide-react";
 import activitiesCSV from "@/data/activities.csv?raw";
 
+type PresetKey = "3m" | "6m" | "ytd" | "1y" | "all";
+
+function getPresetDates(preset: PresetKey): { start: Date | undefined; end: Date | undefined } {
+  const now = new Date();
+  switch (preset) {
+    case "3m":
+      return { start: subMonths(now, 3), end: now };
+    case "6m":
+      return { start: subMonths(now, 6), end: now };
+    case "ytd":
+      return { start: startOfYear(now), end: now };
+    case "1y":
+      return { start: subMonths(now, 12), end: now };
+    case "all":
+      return { start: undefined, end: undefined };
+  }
+}
+
 export function Dashboard() {
   const [allActivities, setAllActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [activePreset, setActivePreset] = useState<PresetKey>("3m");
+  const [startDate, setStartDate] = useState<Date | undefined>(() => getPresetDates("3m").start);
+  const [endDate, setEndDate] = useState<Date | undefined>(() => getPresetDates("3m").end);
 
   useEffect(() => {
     const parsedActivities = parseCSV(activitiesCSV);
     setAllActivities(parsedActivities);
     setLoading(false);
   }, []);
+
+  const handlePresetChange = (preset: PresetKey) => {
+    setActivePreset(preset);
+    const { start, end } = getPresetDates(preset);
+    setStartDate(start);
+    setEndDate(end);
+  };
+
+  const handleStartDateChange = (date: Date | undefined) => {
+    setStartDate(date);
+    setActivePreset(null as any);
+  };
+
+  const handleEndDateChange = (date: Date | undefined) => {
+    setEndDate(date);
+    setActivePreset(null as any);
+  };
 
   const { filteredActivities, weeks, stats, minDate, maxDate } = useMemo(() => {
     let filtered = allActivities;
@@ -48,6 +85,7 @@ export function Dashboard() {
   }, [allActivities, startDate, endDate]);
 
   const handleClearFilter = () => {
+    setActivePreset("all");
     setStartDate(undefined);
     setEndDate(undefined);
   };
@@ -85,9 +123,11 @@ export function Dashboard() {
           <DateRangeFilter
             startDate={startDate}
             endDate={endDate}
-            onStartDateChange={setStartDate}
-            onEndDateChange={setEndDate}
+            onStartDateChange={handleStartDateChange}
+            onEndDateChange={handleEndDateChange}
             onClear={handleClearFilter}
+            activePreset={activePreset}
+            onPresetChange={handlePresetChange}
             minDate={minDate}
             maxDate={maxDate}
           />
