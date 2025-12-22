@@ -1,28 +1,56 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { parseCSV, groupByWeek, calculateStats, Activity, WeekData } from "@/lib/parseActivities";
 import { StatCard } from "./StatCard";
 import { WeeklyChart } from "./WeeklyChart";
-import { ActivityTypeBreakdown } from "./ActivityTypeBreakdown";
+import { MonthlyChart } from "./MonthlyChart";
 import { RecentWeeks } from "./RecentWeeks";
+import { DateRangeFilter } from "./DateRangeFilter";
 import { MapPin, Calendar, Trophy, Zap, Flame } from "lucide-react";
 import activitiesCSV from "@/data/activities.csv?raw";
 
 export function Dashboard() {
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [weeks, setWeeks] = useState<WeekData[]>([]);
-  const [stats, setStats] = useState<ReturnType<typeof calculateStats> | null>(null);
+  const [allActivities, setAllActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     const parsedActivities = parseCSV(activitiesCSV);
-    const groupedWeeks = groupByWeek(parsedActivities);
-    const calculatedStats = calculateStats(parsedActivities, groupedWeeks);
-    
-    setActivities(parsedActivities);
-    setWeeks(groupedWeeks);
-    setStats(calculatedStats);
+    setAllActivities(parsedActivities);
     setLoading(false);
   }, []);
+
+  const { filteredActivities, weeks, stats, minDate, maxDate } = useMemo(() => {
+    let filtered = allActivities;
+    
+    if (startDate) {
+      filtered = filtered.filter(a => a.date >= startDate);
+    }
+    if (endDate) {
+      const endOfDay = new Date(endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(a => a.date <= endOfDay);
+    }
+    
+    const groupedWeeks = groupByWeek(filtered);
+    const calculatedStats = calculateStats(filtered, groupedWeeks);
+    
+    const min = allActivities.length > 0 ? allActivities[0].date : undefined;
+    const max = allActivities.length > 0 ? allActivities[allActivities.length - 1].date : undefined;
+    
+    return {
+      filteredActivities: filtered,
+      weeks: groupedWeeks,
+      stats: calculatedStats,
+      minDate: min,
+      maxDate: max,
+    };
+  }, [allActivities, startDate, endDate]);
+
+  const handleClearFilter = () => {
+    setStartDate(undefined);
+    setEndDate(undefined);
+  };
 
   if (loading || !stats) {
     return (
@@ -52,6 +80,19 @@ export function Dashboard() {
       </header>
 
       <main className="container py-8">
+        {/* Date Range Filter */}
+        <div className="mb-6">
+          <DateRangeFilter
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+            onClear={handleClearFilter}
+            minDate={minDate}
+            maxDate={maxDate}
+          />
+        </div>
+
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <StatCard
@@ -71,7 +112,7 @@ export function Dashboard() {
           <StatCard
             icon={<Trophy className="w-5 h-5" />}
             label="Best Week"
-            value={`${stats.maxWeek?.totalKm.toFixed(1)} km`}
+            value={`${stats.maxWeek?.totalKm.toFixed(1) || 0} km`}
             subValue={stats.maxWeek?.weekLabel}
             delay={100}
           />
@@ -90,7 +131,7 @@ export function Dashboard() {
 
         {/* Bottom Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ActivityTypeBreakdown typeBreakdown={stats.typeBreakdown} />
+          <MonthlyChart activities={filteredActivities} />
           <RecentWeeks weeks={weeks} />
         </div>
       </main>
