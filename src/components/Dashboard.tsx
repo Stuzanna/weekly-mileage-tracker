@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { subMonths, startOfYear } from "date-fns";
 import { parseCSV, groupByWeek, calculateStats, Activity, WeekData } from "@/lib/parseActivities";
 import { StatCard } from "./StatCard";
@@ -6,8 +6,8 @@ import { WeeklyChart } from "./WeeklyChart";
 import { MonthlyChart } from "./MonthlyChart";
 import { RecentWeeks } from "./RecentWeeks";
 import { DateRangeFilter } from "./DateRangeFilter";
-import { MapPin, Calendar, Trophy, Zap, Flame } from "lucide-react";
-import activitiesCSV from "@/data/activities.csv?raw";
+import { MapPin, Calendar, Trophy, Zap, Flame, Upload } from "lucide-react";
+import { Button } from "./ui/button";
 
 type PresetKey = "3m" | "6m" | "ytd" | "1y" | "all";
 
@@ -29,16 +29,26 @@ function getPresetDates(preset: PresetKey): { start: Date | undefined; end: Date
 
 export function Dashboard() {
   const [allActivities, setAllActivities] = useState<Activity[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [activePreset, setActivePreset] = useState<PresetKey>("3m");
   const [startDate, setStartDate] = useState<Date | undefined>(() => getPresetDates("3m").start);
   const [endDate, setEndDate] = useState<Date | undefined>(() => getPresetDates("3m").end);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    const parsedActivities = parseCSV(activitiesCSV);
-    setAllActivities(parsedActivities);
-    setLoading(false);
-  }, []);
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    setLoading(true);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const csvText = e.target?.result as string;
+      const parsedActivities = parseCSV(csvText);
+      setAllActivities(parsedActivities);
+      setLoading(false);
+    };
+    reader.readAsText(file);
+  };
 
   const handlePresetChange = (preset: PresetKey) => {
     setActivePreset(preset);
@@ -90,11 +100,47 @@ export function Dashboard() {
     setEndDate(undefined);
   };
 
-  if (loading || !stats) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-primary animate-pulse">
           <Flame className="w-12 h-12" />
+        </div>
+      </div>
+    );
+  }
+
+  if (allActivities.length === 0) {
+    return (
+      <div className="min-h-screen bg-background bg-gradient-glow flex items-center justify-center">
+        <div className="text-center space-y-6">
+          <div className="p-4 rounded-full bg-gradient-coral shadow-coral mx-auto w-fit">
+            <Flame className="w-12 h-12 text-primary-foreground" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-display font-bold text-foreground">Activity Dashboard</h1>
+            <p className="text-muted-foreground">Upload your activity data to get started</p>
+          </div>
+          <div className="space-y-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            <Button
+              onClick={() => fileInputRef.current?.click()}
+              size="lg"
+              className="gap-2"
+            >
+              <Upload className="w-5 h-5" />
+              Upload CSV
+            </Button>
+            <p className="text-xs text-muted-foreground/70">
+              e.g. activities.csv
+            </p>
+          </div>
         </div>
       </div>
     );
