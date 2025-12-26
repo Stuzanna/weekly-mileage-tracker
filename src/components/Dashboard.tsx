@@ -1,12 +1,13 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { subMonths, startOfYear } from "date-fns";
 import { parseCSV, groupByWeek, calculateStats, Activity, WeekData } from "@/lib/parseActivities";
+import { useAuth } from "@/contexts/AuthContext";
 import { StatCard } from "./StatCard";
 import { WeeklyChart } from "./WeeklyChart";
 import { MonthlyChart } from "./MonthlyChart";
 import { RecentWeeks } from "./RecentWeeks";
 import { DateRangeFilter } from "./DateRangeFilter";
-import { MapPin, Calendar, Trophy, Zap, Flame, Upload } from "lucide-react";
+import { MapPin, Calendar, Trophy, Zap, Flame, Upload, LogOut } from "lucide-react";
 import { Button } from "./ui/button";
 
 type PresetKey = "3m" | "6m" | "ytd" | "1y" | "all";
@@ -28,6 +29,7 @@ function getPresetDates(preset: PresetKey): { start: Date | undefined; end: Date
 }
 
 export function Dashboard() {
+  const { user, signOut } = useAuth();
   const [allActivities, setAllActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(false);
   const [activePreset, setActivePreset] = useState<PresetKey>("3m");
@@ -151,13 +153,22 @@ export function Dashboard() {
       {/* Header */}
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container py-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-coral shadow-coral">
-              <Flame className="w-6 h-6 text-primary-foreground" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-gradient-coral shadow-coral">
+                <Flame className="w-6 h-6 text-primary-foreground" />
+              </div>
+              <div>
+                <h1 className="text-xl font-display font-bold text-foreground">Activity Dashboard</h1>
+                <p className="text-sm text-muted-foreground">Your weekly mileage at a glance</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-display font-bold text-foreground">Activity Dashboard</h1>
-              <p className="text-sm text-muted-foreground">Your weekly mileage at a glance</p>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground hidden sm:block">{user?.email}</span>
+              <Button variant="ghost" size="sm" onClick={signOut} className="gap-2">
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Sign out</span>
+              </Button>
             </div>
           </div>
         </div>
