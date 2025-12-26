@@ -1,12 +1,13 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { subMonths, startOfYear } from "date-fns";
 import { parseCSV, groupByWeek, calculateStats, Activity, WeekData } from "@/lib/parseActivities";
+import { useAuth } from "@/contexts/AuthContext";
 import { StatCard } from "./StatCard";
 import { WeeklyChart } from "./WeeklyChart";
 import { MonthlyChart } from "./MonthlyChart";
 import { RecentWeeks } from "./RecentWeeks";
 import { DateRangeFilter } from "./DateRangeFilter";
-import { MapPin, Calendar, Trophy, Zap, Flame, Upload } from "lucide-react";
+import { MapPin, Calendar, Trophy, Zap, Flame, Upload, LogOut } from "lucide-react";
 import { Button } from "./ui/button";
 
 type PresetKey = "3m" | "6m" | "ytd" | "1y" | "all";
@@ -28,6 +29,7 @@ function getPresetDates(preset: PresetKey): { start: Date | undefined; end: Date
 }
 
 export function Dashboard() {
+  const { user, signOut } = useAuth();
   const [allActivities, setAllActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(false);
   const [activePreset, setActivePreset] = useState<PresetKey>("3m");
@@ -112,34 +114,43 @@ export function Dashboard() {
 
   if (allActivities.length === 0) {
     return (
-      <div className="min-h-screen bg-background bg-gradient-glow flex items-center justify-center">
-        <div className="text-center space-y-6">
-          <div className="p-4 rounded-full bg-gradient-coral shadow-coral mx-auto w-fit">
-            <Flame className="w-12 h-12 text-primary-foreground" />
-          </div>
-          <div className="space-y-2">
-            <h1 className="text-2xl font-display font-bold text-foreground">Activity Dashboard</h1>
-            <p className="text-muted-foreground">Upload your activity data to get started</p>
-          </div>
-          <div className="space-y-3">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-            <Button
-              onClick={() => fileInputRef.current?.click()}
-              size="lg"
-              className="gap-2"
-            >
-              <Upload className="w-5 h-5" />
-              Upload CSV
-            </Button>
-            <p className="text-xs text-muted-foreground/70">
-              e.g. activities.csv
-            </p>
+      <div className="min-h-screen bg-background bg-gradient-glow flex flex-col">
+        <header className="p-4 flex justify-end items-center gap-3">
+          <span className="text-sm text-muted-foreground">{user?.email}</span>
+          <Button variant="ghost" size="sm" onClick={signOut} className="gap-2">
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline">Sign out</span>
+          </Button>
+        </header>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center space-y-6">
+            <div className="p-4 rounded-full bg-gradient-coral shadow-coral mx-auto w-fit">
+              <Flame className="w-12 h-12 text-primary-foreground" />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-2xl font-display font-bold text-foreground">Activity Dashboard</h1>
+              <p className="text-muted-foreground">Upload your activity data to get started</p>
+            </div>
+            <div className="space-y-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                size="lg"
+                className="gap-2"
+              >
+                <Upload className="w-5 h-5" />
+                Upload CSV
+              </Button>
+              <p className="text-xs text-muted-foreground/70">
+                e.g. activities.csv
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -151,13 +162,22 @@ export function Dashboard() {
       {/* Header */}
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container py-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-coral shadow-coral">
-              <Flame className="w-6 h-6 text-primary-foreground" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-gradient-coral shadow-coral">
+                <Flame className="w-6 h-6 text-primary-foreground" />
+              </div>
+              <div>
+                <h1 className="text-xl font-display font-bold text-foreground">Activity Dashboard</h1>
+                <p className="text-sm text-muted-foreground">Your weekly mileage at a glance</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-display font-bold text-foreground">Activity Dashboard</h1>
-              <p className="text-sm text-muted-foreground">Your weekly mileage at a glance</p>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground hidden sm:block">{user?.email}</span>
+              <Button variant="ghost" size="sm" onClick={signOut} className="gap-2">
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Sign out</span>
+              </Button>
             </div>
           </div>
         </div>
