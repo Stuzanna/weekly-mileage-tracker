@@ -114,34 +114,43 @@ export function Dashboard() {
 
   if (allActivities.length === 0) {
     return (
-      <div className="min-h-screen bg-background bg-gradient-glow flex items-center justify-center">
-        <div className="text-center space-y-6">
-          <div className="p-4 rounded-full bg-gradient-coral shadow-coral mx-auto w-fit">
-            <Flame className="w-12 h-12 text-primary-foreground" />
-          </div>
-          <div className="space-y-2">
-            <h1 className="text-2xl font-display font-bold text-foreground">Activity Dashboard</h1>
-            <p className="text-muted-foreground">Upload your activity data to get started</p>
-          </div>
-          <div className="space-y-3">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-            <Button
-              onClick={() => fileInputRef.current?.click()}
-              size="lg"
-              className="gap-2"
-            >
-              <Upload className="w-5 h-5" />
-              Upload CSV
-            </Button>
-            <p className="text-xs text-muted-foreground/70">
-              e.g. activities.csv
-            </p>
+      <div className="min-h-screen bg-background bg-gradient-glow flex flex-col">
+        <header className="p-4 flex justify-end items-center gap-3">
+          <span className="text-sm text-muted-foreground">{user?.email}</span>
+          <Button variant="ghost" size="sm" onClick={signOut} className="gap-2">
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline">Sign out</span>
+          </Button>
+        </header>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center space-y-6">
+            <div className="p-4 rounded-full bg-gradient-coral shadow-coral mx-auto w-fit">
+              <Flame className="w-12 h-12 text-primary-foreground" />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-2xl font-display font-bold text-foreground">Activity Dashboard</h1>
+              <p className="text-muted-foreground">Upload your activity data to get started</p>
+            </div>
+            <div className="space-y-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                size="lg"
+                className="gap-2"
+              >
+                <Upload className="w-5 h-5" />
+                Upload CSV
+              </Button>
+              <p className="text-xs text-muted-foreground/70">
+                e.g. activities.csv
+              </p>
+            </div>
           </div>
         </div>
       </div>
