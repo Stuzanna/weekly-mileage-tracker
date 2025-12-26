@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { subMonths, startOfYear } from "date-fns";
 import { parseCSV, groupByWeek, calculateStats, Activity, WeekData } from "@/lib/parseActivities";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { StatCard } from "./StatCard";
 import { WeeklyChart } from "./WeeklyChart";
 import { MonthlyChart } from "./MonthlyChart";
@@ -9,6 +10,7 @@ import { RecentWeeks } from "./RecentWeeks";
 import { DateRangeFilter } from "./DateRangeFilter";
 import { MapPin, Calendar, Trophy, Zap, Flame, Upload, LogOut } from "lucide-react";
 import { Button } from "./ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 type PresetKey = "3m" | "6m" | "ytd" | "1y" | "all";
 
@@ -30,22 +32,81 @@ function getPresetDates(preset: PresetKey): { start: Date | undefined; end: Date
 
 export function Dashboard() {
   const { user, signOut } = useAuth();
+  const { toast } = useToast();
   const [allActivities, setAllActivities] = useState<Activity[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [activePreset, setActivePreset] = useState<PresetKey>("3m");
   const [startDate, setStartDate] = useState<Date | undefined>(() => getPresetDates("3m").start);
   const [endDate, setEndDate] = useState<Date | undefined>(() => getPresetDates("3m").end);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Load activities from Supabase on mount
+  useEffect(() => {
+    const loadActivities = async () => {
+      if (!user) return;
+      
+      const { data, error } = await supabase
+        .from("activities")
+        .select("*")
+        .order("activity_date", { ascending: true });
+      
+      if (error) {
+        console.error("Error loading activities:", error);
+        toast({ title: "Error loading activities", variant: "destructive" });
+      } else if (data && data.length > 0) {
+        const activities: Activity[] = data.map(row => ({
+          date: new Date(row.activity_date),
+          name: row.name,
+          distanceKm: Number(row.distance_km),
+          elapsedTime: row.elapsed_time,
+          movingTime: row.moving_time,
+          elevationGain: row.elevation_gain ? Number(row.elevation_gain) : undefined,
+          avgHeartRate: row.avg_heart_rate ?? undefined,
+          maxHeartRate: row.max_heart_rate ?? undefined,
+        }));
+        setAllActivities(activities);
+      }
+      setLoading(false);
+    };
+    
+    loadActivities();
+  }, [user, toast]);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || !user) return;
     
     setLoading(true);
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const csvText = e.target?.result as string;
       const parsedActivities = parseCSV(csvText);
+      
+      // Save to Supabase
+      const rows = parsedActivities.map(a => ({
+        user_id: user.id,
+        strava_id: `${a.date.toISOString()}-${a.name}`,
+        activity_date: a.date.toISOString(),
+        name: a.name,
+        distance_km: a.distanceKm,
+        elapsed_time: a.elapsedTime,
+        moving_time: a.movingTime,
+        elevation_gain: a.elevationGain ?? null,
+        avg_heart_rate: a.avgHeartRate ?? null,
+        max_heart_rate: a.maxHeartRate ?? null,
+      }));
+      
+      const { error } = await supabase
+        .from("activities")
+        .upsert(rows, { onConflict: "user_id,strava_id" });
+      
+      if (error) {
+        console.error("Error saving activities:", error);
+        toast({ title: "Error saving activities", variant: "destructive" });
+      } else {
+        toast({ title: `Saved ${parsedActivities.length} activities` });
+      }
+      
       setAllActivities(parsedActivities);
       setLoading(false);
     };
