@@ -4,6 +4,8 @@
 
 **URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
 
+See '/database-setup' for information on how to prepare a back-end for storage.
+
 ## How can I edit this code?
 
 There are several ways of editing your application.
