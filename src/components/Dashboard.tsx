@@ -295,7 +295,7 @@ export function Dashboard() {
 
         {/* Chart */}
         <div className="mb-8">
-          <WeeklyChart weeks={weeks} />
+          <WeeklyChart weeks={weeks} visibleWeeks={activePreset === "all" ? weeks.length : Math.min(weeks.length, 52)} />
         </div>
 
         {/* Bottom Grid */}
