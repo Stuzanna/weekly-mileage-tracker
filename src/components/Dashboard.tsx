@@ -55,14 +55,16 @@ export function Dashboard() {
         toast({ title: "Error loading activities", variant: "destructive" });
       } else if (data && data.length > 0) {
         const activities: Activity[] = data.map(row => ({
+          id: row.strava_id,
           date: new Date(row.activity_date),
           name: row.name,
+          type: "Run",
           distanceKm: Number(row.distance_km),
           elapsedTime: row.elapsed_time,
           movingTime: row.moving_time,
-          elevationGain: row.elevation_gain ? Number(row.elevation_gain) : undefined,
-          avgHeartRate: row.avg_heart_rate ?? undefined,
-          maxHeartRate: row.max_heart_rate ?? undefined,
+          elevationGain: row.elevation_gain ? Number(row.elevation_gain) : 0,
+          avgHeartRate: row.avg_heart_rate ?? null,
+          maxHeartRate: row.max_heart_rate ?? null,
         }));
         setAllActivities(activities);
       }
