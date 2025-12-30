@@ -6,6 +6,10 @@
 
 See '/database-setup' for information on how to prepare a back-end for storage.
 
+Changes that would need to make public:
+- Remove personal activity data, `data/activities.csv`
+- API is public not a secret, no change required
+
 ## How can I edit this code?
 
 There are several ways of editing your application.
