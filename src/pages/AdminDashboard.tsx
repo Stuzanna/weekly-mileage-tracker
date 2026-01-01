@@ -14,10 +14,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Loader2, Users, Shield, ShieldCheck, ArrowUpDown, ArrowUp, ArrowDown, RotateCw } from "lucide-react";
+import { ArrowLeft, Loader2, Users, Shield, ShieldCheck, ArrowUpDown, ArrowUp, ArrowDown, RotateCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { InviteUserDialog } from "@/components/InviteUserDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface UserData {
   id: string;
@@ -40,6 +51,40 @@ const AdminDashboard = () => {
   const [sortColumn, setSortColumn] = useState<SortColumn>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [resendingInvite, setResendingInvite] = useState<string | null>(null);
+  const [deletingUser, setDeletingUser] = useState<string | null>(null);
+
+  const handleDeleteUser = async (userId: string, email: string) => {
+    setDeletingUser(userId);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+
+      if (!accessToken) {
+        toast.error("No valid session");
+        return;
+      }
+
+      const response = await supabase.functions.invoke("admin-delete-user", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: { userId },
+      });
+
+      if (response.error || response.data?.error) {
+        toast.error(response.error?.message || response.data?.error || "Failed to delete user");
+        return;
+      }
+
+      toast.success(`User ${email} deleted successfully`);
+      fetchUsers();
+    } catch (err) {
+      console.error("Error:", err);
+      toast.error("Failed to delete user");
+    } finally {
+      setDeletingUser(null);
+    }
+  };
 
   const handleResendInvite = async (email: string) => {
     setResendingInvite(email);
@@ -331,22 +376,60 @@ const AdminDashboard = () => {
                             : "Never"}
                         </TableCell>
                         <TableCell>
-                          {!userData.last_sign_in_at && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleResendInvite(userData.email)}
-                              disabled={resendingInvite === userData.email}
-                              className="gap-1"
-                            >
-                              {resendingInvite === userData.email ? (
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                              ) : (
-                                <RotateCw className="w-3 h-3" />
-                              )}
-                              Resend
-                            </Button>
-                          )}
+                          <div className="flex items-center gap-1">
+                            {!userData.last_sign_in_at && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleResendInvite(userData.email)}
+                                disabled={resendingInvite === userData.email}
+                                className="gap-1"
+                              >
+                                {resendingInvite === userData.email ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <RotateCw className="w-3 h-3" />
+                                )}
+                                Resend
+                              </Button>
+                            )}
+                            {userData.id !== user?.id && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    disabled={deletingUser === userData.id}
+                                  >
+                                    {deletingUser === userData.id ? (
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="w-3 h-3" />
+                                    )}
+                                    Delete
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete <strong>{userData.email}</strong>? This action cannot be undone and will permanently remove the user and all their data.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDeleteUser(userData.id, userData.email)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
