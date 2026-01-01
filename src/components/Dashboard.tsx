@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { subMonths, startOfYear } from "date-fns";
 import { parseCSV, groupByWeek, calculateStats, Activity, WeekData } from "@/lib/parseActivities";
 import { parseGPX } from "@/lib/parseGPX";
@@ -9,7 +10,7 @@ import { WeeklyChart } from "./WeeklyChart";
 import { MonthlyChart } from "./MonthlyChart";
 import { RecentWeeks } from "./RecentWeeks";
 import { DateRangeFilter } from "./DateRangeFilter";
-import { MapPin, Calendar, Trophy, Zap, Flame, Upload, LogOut, Plus } from "lucide-react";
+import { MapPin, Calendar, Trophy, Zap, Flame, Upload, LogOut, Plus, List } from "lucide-react";
 import { Button } from "./ui/button";
 import { useToast } from "@/hooks/use-toast";
 
@@ -33,6 +34,7 @@ function getPresetDates(preset: PresetKey): { start: Date | undefined; end: Date
 
 export function Dashboard() {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [allActivities, setAllActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -324,6 +326,15 @@ export function Dashboard() {
               >
                 <Plus className="w-4 h-4" />
                 <span className="hidden sm:inline">Upload Run</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/activities")}
+                className="gap-2"
+              >
+                <List className="w-4 h-4" />
+                <span className="hidden sm:inline">All Activities</span>
               </Button>
               <span className="text-sm text-muted-foreground hidden sm:block">{user?.email}</span>
               <Button variant="ghost" size="sm" onClick={signOut} className="gap-2">
