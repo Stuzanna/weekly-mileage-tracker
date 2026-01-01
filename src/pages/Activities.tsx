@@ -77,7 +77,7 @@ const Activities = () => {
   const [maxDistance, setMaxDistance] = useState("");
 
   // Sort state
-  type SortColumn = "activity_date" | "name" | "distance_km" | "moving_time" | "elevation_gain" | "avg_heart_rate" | "max_heart_rate";
+  type SortColumn = "activity_date" | "name" | "distance_km" | "moving_time" | "elevation_gain";
   const [sortColumn, setSortColumn] = useState<SortColumn>("activity_date");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
@@ -434,24 +434,6 @@ const Activities = () => {
                         <SortIcon column="elevation_gain" />
                       </div>
                     </TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-muted/50 transition-colors text-right"
-                      onClick={() => handleSort("avg_heart_rate")}
-                    >
-                      <div className="flex items-center justify-end">
-                        Avg HR
-                        <SortIcon column="avg_heart_rate" />
-                      </div>
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-muted/50 transition-colors text-right"
-                      onClick={() => handleSort("max_heart_rate")}
-                    >
-                      <div className="flex items-center justify-end">
-                        Max HR
-                        <SortIcon column="max_heart_rate" />
-                      </div>
-                    </TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -471,16 +453,6 @@ const Activities = () => {
                       <TableCell className="text-right">
                         {activity.elevation_gain !== null
                           ? `${Math.round(activity.elevation_gain)} m`
-                          : "-"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {activity.avg_heart_rate !== null
-                          ? `${activity.avg_heart_rate} bpm`
-                          : "-"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {activity.max_heart_rate !== null
-                          ? `${activity.max_heart_rate} bpm`
                           : "-"}
                       </TableCell>
                       <TableCell>

@@ -5,14 +5,15 @@ import { Dashboard } from "@/components/Dashboard";
 import { Loader2 } from "lucide-react";
 
 const Index = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, isPasswordRecovery } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && !user) {
+    // Redirect to auth page if not logged in OR if in password recovery mode
+    if (!loading && (!user || isPasswordRecovery)) {
       navigate("/auth", { replace: true });
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, isPasswordRecovery, navigate]);
 
   if (loading) {
     return (
@@ -22,7 +23,7 @@ const Index = () => {
     );
   }
 
-  if (!user) {
+  if (!user || isPasswordRecovery) {
     return null;
   }
 
