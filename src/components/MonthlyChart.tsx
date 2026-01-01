@@ -74,6 +74,7 @@ export function MonthlyChart({ activities }: MonthlyChartProps) {
                 boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
               }}
               labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600 }}
+              itemStyle={{ color: 'hsl(var(--foreground))' }}
               formatter={(value: number) => [`${value.toFixed(1)} km`, 'Distance']}
             />
             <Bar dataKey="totalKm" radius={[4, 4, 0, 0]}>
