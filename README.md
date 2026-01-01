@@ -7,8 +7,13 @@
 See '/database-setup' for information on how to prepare a back-end for storage.
 
 Changes that would need to make public:
+
 - Remove personal activity data, `data/activities.csv`
 - API is public not a secret, no change required
+
+## Deployment
+
+Deployed on Vercel, uses the `production` branch at time of writing. Check the project environment settings for actual configuration.
 
 ## How can I edit this code?
 
