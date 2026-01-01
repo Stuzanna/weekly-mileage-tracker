@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Loader2, Search, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpDown, Loader2, Search, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,8 +69,22 @@ const Activities = () => {
   const [minDistance, setMinDistance] = useState("");
   const [maxDistance, setMaxDistance] = useState("");
 
-  const filteredActivities = useMemo(() => {
-    return activities.filter((activity) => {
+  // Sort state
+  type SortColumn = "activity_date" | "name" | "distance_km" | "moving_time" | "elevation_gain" | "avg_heart_rate" | "max_heart_rate";
+  const [sortColumn, setSortColumn] = useState<SortColumn>("activity_date");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("desc");
+    }
+  };
+
+  const filteredAndSortedActivities = useMemo(() => {
+    const filtered = activities.filter((activity) => {
       // Name filter
       if (searchName && !activity.name.toLowerCase().includes(searchName.toLowerCase())) {
         return false;
@@ -99,7 +113,28 @@ const Activities = () => {
 
       return true;
     });
-  }, [activities, searchName, startDate, endDate, minDistance, maxDistance]);
+
+    // Sort
+    return [...filtered].sort((a, b) => {
+      let aVal = a[sortColumn];
+      let bVal = b[sortColumn];
+
+      // Handle nulls
+      if (aVal === null && bVal === null) return 0;
+      if (aVal === null) return sortDirection === "asc" ? 1 : -1;
+      if (bVal === null) return sortDirection === "asc" ? -1 : 1;
+
+      // Compare
+      if (typeof aVal === "string" && typeof bVal === "string") {
+        const comparison = aVal.localeCompare(bVal);
+        return sortDirection === "asc" ? comparison : -comparison;
+      }
+
+      if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [activities, searchName, startDate, endDate, minDistance, maxDistance, sortColumn, sortDirection]);
 
   const clearFilters = () => {
     setSearchName("");
@@ -110,6 +145,17 @@ const Activities = () => {
   };
 
   const hasActiveFilters = searchName || startDate || endDate || minDistance || maxDistance;
+
+  const SortIcon = ({ column }: { column: SortColumn }) => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground/50" />;
+    }
+    return sortDirection === "asc" ? (
+      <ArrowUp className="ml-2 h-4 w-4" />
+    ) : (
+      <ArrowDown className="ml-2 h-4 w-4" />
+    );
+  };
 
   const handleDelete = async (id: string, name: string) => {
     const { error } = await supabase.from("activities").delete().eq("id", id);
@@ -185,7 +231,7 @@ const Activities = () => {
             <h1 className="text-2xl font-bold text-foreground">All Activities</h1>
           </div>
           <span className="text-sm text-muted-foreground">
-            {filteredActivities.length} of {activities.length} {activities.length === 1 ? "activity" : "activities"}
+            {filteredAndSortedActivities.length} of {activities.length} {activities.length === 1 ? "activity" : "activities"}
           </span>
         </div>
 
@@ -300,7 +346,7 @@ const Activities = () => {
           )}
         </div>
 
-        {filteredActivities.length === 0 ? (
+        {filteredAndSortedActivities.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">
               {hasActiveFilters ? "No activities match your filters." : "No activities found."}
@@ -320,18 +366,74 @@ const Activities = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead className="text-right">Distance</TableHead>
-                  <TableHead className="text-right">Duration</TableHead>
-                  <TableHead className="text-right">Elevation</TableHead>
-                  <TableHead className="text-right">Avg HR</TableHead>
-                  <TableHead className="text-right">Max HR</TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => handleSort("activity_date")}
+                  >
+                    <div className="flex items-center">
+                      Date
+                      <SortIcon column="activity_date" />
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => handleSort("name")}
+                  >
+                    <div className="flex items-center">
+                      Name
+                      <SortIcon column="name" />
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-muted/50 transition-colors text-right"
+                    onClick={() => handleSort("distance_km")}
+                  >
+                    <div className="flex items-center justify-end">
+                      Distance
+                      <SortIcon column="distance_km" />
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-muted/50 transition-colors text-right"
+                    onClick={() => handleSort("moving_time")}
+                  >
+                    <div className="flex items-center justify-end">
+                      Duration
+                      <SortIcon column="moving_time" />
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-muted/50 transition-colors text-right"
+                    onClick={() => handleSort("elevation_gain")}
+                  >
+                    <div className="flex items-center justify-end">
+                      Elevation
+                      <SortIcon column="elevation_gain" />
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-muted/50 transition-colors text-right"
+                    onClick={() => handleSort("avg_heart_rate")}
+                  >
+                    <div className="flex items-center justify-end">
+                      Avg HR
+                      <SortIcon column="avg_heart_rate" />
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-muted/50 transition-colors text-right"
+                    onClick={() => handleSort("max_heart_rate")}
+                  >
+                    <div className="flex items-center justify-end">
+                      Max HR
+                      <SortIcon column="max_heart_rate" />
+                    </div>
+                  </TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredActivities.map((activity) => (
+                {filteredAndSortedActivities.map((activity) => (
                   <TableRow key={activity.id}>
                     <TableCell className="font-medium">
                       {format(new Date(activity.activity_date), "MMM d, yyyy")}
