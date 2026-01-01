@@ -14,6 +14,8 @@ Deno.serve(async (req) => {
   try {
     // Get the authorization header
     const authHeader = req.headers.get("Authorization");
+    console.log("Auth header present:", !!authHeader);
+    
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Missing authorization header" }), {
         status: 401,
@@ -21,32 +23,33 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Create a client with the user's JWT to verify their identity
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    // Create admin client with service role key
+    const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-    // Get the authenticated user
-    const { data: { user }, error: userError } = await userClient.auth.getUser();
+    // Extract the JWT token and get the user
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: userError } = await adminClient.auth.getUser(token);
+    
+    console.log("User lookup result:", user?.id, userError?.message);
+
     if (userError || !user) {
+      console.error("User auth error:", userError);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Use service role client to check if user is admin
-    const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey);
-
     // Check if the user has admin role using the has_role function
     const { data: isAdmin, error: roleError } = await adminClient.rpc("has_role", {
       _user_id: user.id,
       _role: "admin",
     });
+
+    console.log("Admin check result:", isAdmin, roleError?.message);
 
     if (roleError || !isAdmin) {
       return new Response(JSON.stringify({ error: "Forbidden: Admin access required" }), {
