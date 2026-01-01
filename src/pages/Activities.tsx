@@ -2,10 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpDown, Loader2, Search, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Loader2, Search, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -145,6 +152,21 @@ const Activities = () => {
   };
 
   const hasActiveFilters = searchName || startDate || endDate || minDistance || maxDistance;
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchName, startDate, endDate, minDistance, maxDistance, sortColumn, sortDirection]);
+
+  const totalPages = Math.ceil(filteredAndSortedActivities.length / pageSize);
+  const paginatedActivities = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredAndSortedActivities.slice(start, start + pageSize);
+  }, [filteredAndSortedActivities, currentPage, pageSize]);
 
   const SortIcon = ({ column }: { column: SortColumn }) => {
     if (sortColumn !== column) {
@@ -362,139 +384,191 @@ const Activities = () => {
             )}
           </div>
         ) : (
-          <div className="rounded-lg border bg-card">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort("activity_date")}
-                  >
-                    <div className="flex items-center">
-                      Date
-                      <SortIcon column="activity_date" />
-                    </div>
-                  </TableHead>
-                  <TableHead
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort("name")}
-                  >
-                    <div className="flex items-center">
-                      Name
-                      <SortIcon column="name" />
-                    </div>
-                  </TableHead>
-                  <TableHead
-                    className="cursor-pointer hover:bg-muted/50 transition-colors text-right"
-                    onClick={() => handleSort("distance_km")}
-                  >
-                    <div className="flex items-center justify-end">
-                      Distance
-                      <SortIcon column="distance_km" />
-                    </div>
-                  </TableHead>
-                  <TableHead
-                    className="cursor-pointer hover:bg-muted/50 transition-colors text-right"
-                    onClick={() => handleSort("moving_time")}
-                  >
-                    <div className="flex items-center justify-end">
-                      Duration
-                      <SortIcon column="moving_time" />
-                    </div>
-                  </TableHead>
-                  <TableHead
-                    className="cursor-pointer hover:bg-muted/50 transition-colors text-right"
-                    onClick={() => handleSort("elevation_gain")}
-                  >
-                    <div className="flex items-center justify-end">
-                      Elevation
-                      <SortIcon column="elevation_gain" />
-                    </div>
-                  </TableHead>
-                  <TableHead
-                    className="cursor-pointer hover:bg-muted/50 transition-colors text-right"
-                    onClick={() => handleSort("avg_heart_rate")}
-                  >
-                    <div className="flex items-center justify-end">
-                      Avg HR
-                      <SortIcon column="avg_heart_rate" />
-                    </div>
-                  </TableHead>
-                  <TableHead
-                    className="cursor-pointer hover:bg-muted/50 transition-colors text-right"
-                    onClick={() => handleSort("max_heart_rate")}
-                  >
-                    <div className="flex items-center justify-end">
-                      Max HR
-                      <SortIcon column="max_heart_rate" />
-                    </div>
-                  </TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAndSortedActivities.map((activity) => (
-                  <TableRow key={activity.id}>
-                    <TableCell className="font-medium">
-                      {format(new Date(activity.activity_date), "MMM d, yyyy")}
-                    </TableCell>
-                    <TableCell>{activity.name}</TableCell>
-                    <TableCell className="text-right">
-                      {activity.distance_km.toFixed(2)} km
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatDuration(activity.moving_time)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {activity.elevation_gain !== null
-                        ? `${Math.round(activity.elevation_gain)} m`
-                        : "-"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {activity.avg_heart_rate !== null
-                        ? `${activity.avg_heart_rate} bpm`
-                        : "-"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {activity.max_heart_rate !== null
-                        ? `${activity.max_heart_rate} bpm`
-                        : "-"}
-                    </TableCell>
-                    <TableCell>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Activity</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete "{activity.name}"? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDelete(activity.id, activity.name)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TableCell>
+          <>
+            <div className="rounded-lg border bg-card">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => handleSort("activity_date")}
+                    >
+                      <div className="flex items-center">
+                        Date
+                        <SortIcon column="activity_date" />
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => handleSort("name")}
+                    >
+                      <div className="flex items-center">
+                        Name
+                        <SortIcon column="name" />
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      className="cursor-pointer hover:bg-muted/50 transition-colors text-right"
+                      onClick={() => handleSort("distance_km")}
+                    >
+                      <div className="flex items-center justify-end">
+                        Distance
+                        <SortIcon column="distance_km" />
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      className="cursor-pointer hover:bg-muted/50 transition-colors text-right"
+                      onClick={() => handleSort("moving_time")}
+                    >
+                      <div className="flex items-center justify-end">
+                        Duration
+                        <SortIcon column="moving_time" />
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      className="cursor-pointer hover:bg-muted/50 transition-colors text-right"
+                      onClick={() => handleSort("elevation_gain")}
+                    >
+                      <div className="flex items-center justify-end">
+                        Elevation
+                        <SortIcon column="elevation_gain" />
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      className="cursor-pointer hover:bg-muted/50 transition-colors text-right"
+                      onClick={() => handleSort("avg_heart_rate")}
+                    >
+                      <div className="flex items-center justify-end">
+                        Avg HR
+                        <SortIcon column="avg_heart_rate" />
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      className="cursor-pointer hover:bg-muted/50 transition-colors text-right"
+                      onClick={() => handleSort("max_heart_rate")}
+                    >
+                      <div className="flex items-center justify-end">
+                        Max HR
+                        <SortIcon column="max_heart_rate" />
+                      </div>
+                    </TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {paginatedActivities.map((activity) => (
+                    <TableRow key={activity.id}>
+                      <TableCell className="font-medium">
+                        {format(new Date(activity.activity_date), "MMM d, yyyy")}
+                      </TableCell>
+                      <TableCell>{activity.name}</TableCell>
+                      <TableCell className="text-right">
+                        {activity.distance_km.toFixed(2)} km
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatDuration(activity.moving_time)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {activity.elevation_gain !== null
+                          ? `${Math.round(activity.elevation_gain)} m`
+                          : "-"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {activity.avg_heart_rate !== null
+                          ? `${activity.avg_heart_rate} bpm`
+                          : "-"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {activity.max_heart_rate !== null
+                          ? `${activity.max_heart_rate} bpm`
+                          : "-"}
+                      </TableCell>
+                      <TableCell>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Activity</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete "{activity.name}"? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDelete(activity.id, activity.name)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 0 && (
+              <div className="flex items-center justify-between mt-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Rows per page:</span>
+                  <Select
+                    value={pageSize.toString()}
+                    onValueChange={(value) => {
+                      setPageSize(Number(value));
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="w-[70px] h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="25">25</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, filteredAndSortedActivities.length)} of {filteredAndSortedActivities.length}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
