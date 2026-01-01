@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -16,6 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Loader2, Users, Shield, ShieldCheck, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { format } from "date-fns";
+import { InviteUserDialog } from "@/components/InviteUserDialog";
 
 interface UserData {
   id: string;
@@ -77,44 +78,45 @@ const AdminDashboard = () => {
     }
   }, [isAdmin, adminLoading, user, navigate]);
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      if (!isAdmin || adminLoading) return;
+  const fetchUsers = useCallback(async () => {
+    if (!isAdmin || adminLoading) return;
 
-      try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const accessToken = sessionData.session?.access_token;
+    try {
+      setLoading(true);
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
 
-        if (!accessToken) {
-          setError("No valid session");
-          setLoading(false);
-          return;
-        }
-
-        const response = await supabase.functions.invoke("admin-list-users", {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-
-        if (response.error) {
-          console.error("Error fetching users:", response.error);
-          setError(response.error.message || "Failed to fetch users");
-        } else if (response.data?.users) {
-          setUsers(response.data.users);
-        }
-      } catch (err) {
-        console.error("Error:", err);
-        setError("Failed to fetch users");
-      } finally {
+      if (!accessToken) {
+        setError("No valid session");
         setLoading(false);
+        return;
       }
-    };
 
+      const response = await supabase.functions.invoke("admin-list-users", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (response.error) {
+        console.error("Error fetching users:", response.error);
+        setError(response.error.message || "Failed to fetch users");
+      } else if (response.data?.users) {
+        setUsers(response.data.users);
+      }
+    } catch (err) {
+      console.error("Error:", err);
+      setError("Failed to fetch users");
+    } finally {
+      setLoading(false);
+    }
+  }, [isAdmin, adminLoading]);
+
+  useEffect(() => {
     if (isAdmin && !adminLoading) {
       fetchUsers();
     }
-  }, [isAdmin, adminLoading]);
+  }, [isAdmin, adminLoading, fetchUsers]);
 
   if (authLoading || adminLoading || loading) {
     return (
@@ -155,10 +157,13 @@ const AdminDashboard = () => {
                 </p>
               </div>
             </div>
-            <Badge variant="outline" className="gap-1">
-              <ShieldCheck className="w-3 h-3" />
-              Admin
-            </Badge>
+            <div className="flex items-center gap-3">
+              <Badge variant="outline" className="gap-1">
+                <ShieldCheck className="w-3 h-3" />
+                Admin
+              </Badge>
+              <InviteUserDialog onUserInvited={fetchUsers} />
+            </div>
           </div>
         </div>
       </header>
