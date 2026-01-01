@@ -14,7 +14,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Loader2, Users, Shield, ShieldCheck, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowLeft, Loader2, Users, Shield, ShieldCheck, ArrowUpDown, ArrowUp, ArrowDown, RotateCw } from "lucide-react";
+import { toast } from "sonner";
 import { format } from "date-fns";
 import { InviteUserDialog } from "@/components/InviteUserDialog";
 
@@ -38,6 +39,39 @@ const AdminDashboard = () => {
   const [error, setError] = useState<string | null>(null);
   const [sortColumn, setSortColumn] = useState<SortColumn>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [resendingInvite, setResendingInvite] = useState<string | null>(null);
+
+  const handleResendInvite = async (email: string) => {
+    setResendingInvite(email);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+
+      if (!accessToken) {
+        toast.error("No valid session");
+        return;
+      }
+
+      const response = await supabase.functions.invoke("admin-invite-user", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: { email },
+      });
+
+      if (response.error || response.data?.error) {
+        toast.error(response.error?.message || response.data?.error || "Failed to resend invite");
+        return;
+      }
+
+      toast.success(`Invitation resent to ${email}`);
+    } catch (err) {
+      console.error("Error:", err);
+      toast.error("Failed to resend invite");
+    } finally {
+      setResendingInvite(null);
+    }
+  };
 
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
@@ -267,6 +301,7 @@ const AdminDashboard = () => {
                           Last Sign In {getSortIcon('last_sign_in_at')}
                         </div>
                       </TableHead>
+                      <TableHead className="w-[100px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -294,6 +329,24 @@ const AdminDashboard = () => {
                                 "MMM d, yyyy h:mm a"
                               )
                             : "Never"}
+                        </TableCell>
+                        <TableCell>
+                          {!userData.last_sign_in_at && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleResendInvite(userData.email)}
+                              disabled={resendingInvite === userData.email}
+                              className="gap-1"
+                            >
+                              {resendingInvite === userData.email ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <RotateCw className="w-3 h-3" />
+                              )}
+                              Resend
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
