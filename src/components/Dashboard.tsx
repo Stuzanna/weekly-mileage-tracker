@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { subMonths, startOfYear } from "date-fns";
 import { parseCSV, groupByWeek, calculateStats, Activity, WeekData } from "@/lib/parseActivities";
+import { parseGPX } from "@/lib/parseGPX";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { StatCard } from "./StatCard";
@@ -8,7 +9,7 @@ import { WeeklyChart } from "./WeeklyChart";
 import { MonthlyChart } from "./MonthlyChart";
 import { RecentWeeks } from "./RecentWeeks";
 import { DateRangeFilter } from "./DateRangeFilter";
-import { MapPin, Calendar, Trophy, Zap, Flame, Upload, LogOut } from "lucide-react";
+import { MapPin, Calendar, Trophy, Zap, Flame, Upload, LogOut, Plus } from "lucide-react";
 import { Button } from "./ui/button";
 import { useToast } from "@/hooks/use-toast";
 
@@ -39,6 +40,7 @@ export function Dashboard() {
   const [startDate, setStartDate] = useState<Date | undefined>(() => getPresetDates("3m").start);
   const [endDate, setEndDate] = useState<Date | undefined>(() => getPresetDates("3m").end);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const gpxFileInputRef = useRef<HTMLInputElement>(null);
 
   // Load activities from Supabase on mount
   useEffect(() => {
@@ -113,6 +115,59 @@ export function Dashboard() {
       setLoading(false);
     };
     reader.readAsText(file);
+  };
+
+  const handleGPXUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    setLoading(true);
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const gpxText = e.target?.result as string;
+      const result = parseGPX(gpxText, file.name);
+
+      if (result.error) {
+        toast({ title: result.error, variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+
+      const activity = result.activity;
+
+      // Save to Supabase
+      const row = {
+        user_id: user.id,
+        strava_id: activity.id,
+        activity_date: activity.date.toISOString(),
+        name: activity.name,
+        distance_km: activity.distanceKm,
+        elapsed_time: activity.elapsedTime,
+        moving_time: activity.movingTime,
+        elevation_gain: activity.elevationGain ?? null,
+        avg_heart_rate: activity.avgHeartRate ?? null,
+        max_heart_rate: activity.maxHeartRate ?? null,
+      };
+
+      const { error } = await supabase
+        .from("activities")
+        .upsert([row], { onConflict: "user_id,strava_id" });
+
+      if (error) {
+        console.error("Error saving activity:", error);
+        toast({ title: "Error saving activity", variant: "destructive" });
+      } else {
+        toast({ title: `Added: ${activity.name}` });
+        // Add to activities and re-sort
+        setAllActivities(prev => 
+          [...prev, activity].sort((a, b) => a.date.getTime() - b.date.getTime())
+        );
+      }
+      setLoading(false);
+    };
+    reader.readAsText(file);
+    // Reset input so same file can be re-uploaded
+    event.target.value = '';
   };
 
   const handlePresetChange = (preset: PresetKey) => {
@@ -202,16 +257,34 @@ export function Dashboard() {
                 onChange={handleFileUpload}
                 className="hidden"
               />
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                size="lg"
-                className="gap-2"
-              >
-                <Upload className="w-5 h-5" />
-                Upload CSV
-              </Button>
+              <input
+                ref={gpxFileInputRef}
+                type="file"
+                accept=".gpx"
+                onChange={handleGPXUpload}
+                className="hidden"
+              />
+              <div className="flex gap-3 justify-center">
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  size="lg"
+                  className="gap-2"
+                >
+                  <Upload className="w-5 h-5" />
+                  Upload CSV
+                </Button>
+                <Button
+                  onClick={() => gpxFileInputRef.current?.click()}
+                  size="lg"
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <Plus className="w-5 h-5" />
+                  Upload Run
+                </Button>
+              </div>
               <p className="text-xs text-muted-foreground/70">
-                e.g. activities.csv
+                Bulk import via CSV or add a single .gpx file
               </p>
             </div>
           </div>
@@ -236,6 +309,22 @@ export function Dashboard() {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <input
+                ref={gpxFileInputRef}
+                type="file"
+                accept=".gpx"
+                onChange={handleGPXUpload}
+                className="hidden"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => gpxFileInputRef.current?.click()}
+                className="gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Upload Run</span>
+              </Button>
               <span className="text-sm text-muted-foreground hidden sm:block">{user?.email}</span>
               <Button variant="ghost" size="sm" onClick={signOut} className="gap-2">
                 <LogOut className="w-4 h-4" />
