@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
 
     // Invite the user using admin API
     const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
-      redirectTo: `${req.headers.get("origin") || "https://bc60a7b5-a1ee-49b9-adad-241b7730169f.lovableproject.com"}/auth`,
+      redirectTo: "https://weekly-mileage-tracker.vercel.app/auth",
     });
 
     if (inviteError) {
