@@ -7,13 +7,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Flame, Loader2 } from "lucide-react";
+import { Flame, Loader2, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 
 const authSchema = z.object({
   email: z.string().trim().email("Please enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+const emailSchema = z.object({
+  email: z.string().trim().email("Please enter a valid email address"),
 });
 
 const passwordSchema = z.object({
@@ -31,24 +35,29 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; confirmPassword?: string }>({});
   const [isInviteFlow, setIsInviteFlow] = useState(false);
+  const [isRecoveryFlow, setIsRecoveryFlow] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
   const { signIn, signUp, user, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Detect invite flow from URL hash
+  // Detect invite or recovery flow from URL hash
   useEffect(() => {
     const hash = window.location.hash;
     if (hash.includes('type=invite')) {
       setIsInviteFlow(true);
+    } else if (hash.includes('type=recovery')) {
+      setIsRecoveryFlow(true);
     }
   }, []);
 
-  // Redirect logged-in users (but not during invite flow)
+  // Redirect logged-in users (but not during invite/recovery flow)
   useEffect(() => {
-    if (!loading && user && !isInviteFlow) {
+    if (!loading && user && !isInviteFlow && !isRecoveryFlow) {
       navigate("/", { replace: true });
     }
-  }, [user, loading, navigate, isInviteFlow]);
+  }, [user, loading, navigate, isInviteFlow, isRecoveryFlow]);
 
   const validateForm = () => {
     const result = authSchema.safeParse({ email, password });
@@ -57,6 +66,20 @@ export default function Auth() {
       result.error.errors.forEach((err) => {
         if (err.path[0] === "email") fieldErrors.email = err.message;
         if (err.path[0] === "password") fieldErrors.password = err.message;
+      });
+      setErrors(fieldErrors);
+      return false;
+    }
+    setErrors({});
+    return true;
+  };
+
+  const validateEmailForm = () => {
+    const result = emailSchema.safeParse({ email });
+    if (!result.success) {
+      const fieldErrors: { email?: string } = {};
+      result.error.errors.forEach((err) => {
+        if (err.path[0] === "email") fieldErrors.email = err.message;
       });
       setErrors(fieldErrors);
       return false;
@@ -129,6 +152,31 @@ export default function Auth() {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateEmailForm()) return;
+
+    setIsLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth`,
+    });
+    setIsLoading(false);
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Failed to send reset email",
+        description: error.message,
+      });
+    } else {
+      setResetEmailSent(true);
+      toast({
+        title: "Reset email sent!",
+        description: "Check your inbox for a password reset link.",
+      });
+    }
+  };
+
   const handleSetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validatePasswordForm()) return;
@@ -145,10 +193,11 @@ export default function Auth() {
       });
     } else {
       toast({
-        title: "Password set successfully!",
+        title: "Password updated!",
         description: "You can now sign in with your new password.",
       });
       setIsInviteFlow(false);
+      setIsRecoveryFlow(false);
       navigate("/", { replace: true });
     }
   };
@@ -161,8 +210,8 @@ export default function Auth() {
     );
   }
 
-  // Show password setup form for invited users
-  if (isInviteFlow && user) {
+  // Show password setup form for invited or recovery users
+  if ((isInviteFlow || isRecoveryFlow) && user) {
     return (
       <div className="min-h-screen bg-background bg-gradient-glow flex items-center justify-center p-4">
         <Card className="w-full max-w-md shadow-card border-border/50">
@@ -171,14 +220,20 @@ export default function Auth() {
               <Flame className="w-8 h-8 text-primary-foreground" />
             </div>
             <div>
-              <CardTitle className="text-2xl font-display">Welcome!</CardTitle>
-              <CardDescription>Set your password to complete your account setup</CardDescription>
+              <CardTitle className="text-2xl font-display">
+                {isRecoveryFlow ? "Reset Password" : "Welcome!"}
+              </CardTitle>
+              <CardDescription>
+                {isRecoveryFlow 
+                  ? "Enter your new password below" 
+                  : "Set your password to complete your account setup"}
+              </CardDescription>
             </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSetPassword} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="new-password">Password</Label>
+                <Label htmlFor="new-password">New Password</Label>
                 <Input
                   id="new-password"
                   type="password"
@@ -205,6 +260,81 @@ export default function Auth() {
                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Set Password"}
               </Button>
             </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show forgot password form
+  if (showForgotPassword) {
+    return (
+      <div className="min-h-screen bg-background bg-gradient-glow flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-card border-border/50">
+          <CardHeader className="text-center space-y-4">
+            <div className="p-3 rounded-full bg-gradient-coral shadow-coral mx-auto w-fit">
+              <Flame className="w-8 h-8 text-primary-foreground" />
+            </div>
+            <div>
+              <CardTitle className="text-2xl font-display">Reset Password</CardTitle>
+              <CardDescription>
+                {resetEmailSent 
+                  ? "Check your email for a reset link" 
+                  : "Enter your email to receive a password reset link"}
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {resetEmailSent ? (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground text-center">
+                  We've sent a password reset link to <strong>{email}</strong>. 
+                  Click the link in the email to reset your password.
+                </p>
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => {
+                    setShowForgotPassword(false);
+                    setResetEmailSent(false);
+                    setEmail("");
+                  }}
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Sign In
+                </Button>
+              </div>
+            ) : (
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="reset-email">Email</Label>
+                  <Input
+                    id="reset-email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoading}
+                  />
+                  {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+                </div>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send Reset Link"}
+                </Button>
+                <Button 
+                  type="button"
+                  variant="ghost" 
+                  className="w-full"
+                  onClick={() => {
+                    setShowForgotPassword(false);
+                    setErrors({});
+                  }}
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Sign In
+                </Button>
+              </form>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -245,7 +375,16 @@ export default function Auth() {
                   {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signin-password">Password</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="signin-password">Password</Label>
+                    <button
+                      type="button"
+                      className="text-sm text-primary hover:underline"
+                      onClick={() => setShowForgotPassword(true)}
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
                   <Input
                     id="signin-password"
                     type="password"
