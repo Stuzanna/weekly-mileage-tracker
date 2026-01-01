@@ -4,13 +4,14 @@ import { subMonths, startOfYear } from "date-fns";
 import { parseCSV, groupByWeek, calculateStats, Activity, WeekData } from "@/lib/parseActivities";
 import { parseGPX } from "@/lib/parseGPX";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { supabase } from "@/integrations/supabase/client";
 import { StatCard } from "./StatCard";
 import { WeeklyChart } from "./WeeklyChart";
 import { MonthlyChart } from "./MonthlyChart";
 import { RecentWeeks } from "./RecentWeeks";
 import { DateRangeFilter } from "./DateRangeFilter";
-import { MapPin, Calendar, Trophy, Zap, Flame, Upload, LogOut, Plus, List } from "lucide-react";
+import { MapPin, Calendar, Trophy, Zap, Flame, Upload, LogOut, Plus, List, Shield } from "lucide-react";
 import { Button } from "./ui/button";
 import { useToast } from "@/hooks/use-toast";
 
@@ -34,6 +35,7 @@ function getPresetDates(preset: PresetKey): { start: Date | undefined; end: Date
 
 export function Dashboard() {
   const { user, signOut } = useAuth();
+  const { isAdmin } = useIsAdmin();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [allActivities, setAllActivities] = useState<Activity[]>([]);
@@ -336,6 +338,17 @@ export function Dashboard() {
                 <List className="w-4 h-4" />
                 <span className="hidden sm:inline">All Activities</span>
               </Button>
+              {isAdmin && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/admin")}
+                  className="gap-2"
+                >
+                  <Shield className="w-4 h-4" />
+                  <span className="hidden sm:inline">Admin</span>
+                </Button>
+              )}
               <span className="text-sm text-muted-foreground hidden sm:block">{user?.email}</span>
               <Button variant="ghost" size="sm" onClick={signOut} className="gap-2">
                 <LogOut className="w-4 h-4" />
