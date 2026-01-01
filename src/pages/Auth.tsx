@@ -35,29 +35,26 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; confirmPassword?: string }>({});
   const [isInviteFlow, setIsInviteFlow] = useState(false);
-  const [isRecoveryFlow, setIsRecoveryFlow] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
-  const { signIn, signUp, user, loading } = useAuth();
+  const { signIn, signUp, user, loading, isPasswordRecovery, clearPasswordRecovery } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Detect invite or recovery flow from URL hash
+  // Detect invite flow from URL hash
   useEffect(() => {
     const hash = window.location.hash;
     if (hash.includes('type=invite')) {
       setIsInviteFlow(true);
-    } else if (hash.includes('type=recovery')) {
-      setIsRecoveryFlow(true);
     }
   }, []);
 
   // Redirect logged-in users (but not during invite/recovery flow)
   useEffect(() => {
-    if (!loading && user && !isInviteFlow && !isRecoveryFlow) {
+    if (!loading && user && !isInviteFlow && !isPasswordRecovery) {
       navigate("/", { replace: true });
     }
-  }, [user, loading, navigate, isInviteFlow, isRecoveryFlow]);
+  }, [user, loading, navigate, isInviteFlow, isPasswordRecovery]);
 
   const validateForm = () => {
     const result = authSchema.safeParse({ email, password });
@@ -197,7 +194,7 @@ export default function Auth() {
         description: "You can now sign in with your new password.",
       });
       setIsInviteFlow(false);
-      setIsRecoveryFlow(false);
+      clearPasswordRecovery();
       navigate("/", { replace: true });
     }
   };
@@ -211,7 +208,7 @@ export default function Auth() {
   }
 
   // Show password setup form for invited or recovery users
-  if ((isInviteFlow || isRecoveryFlow) && user) {
+  if ((isInviteFlow || isPasswordRecovery) && user) {
     return (
       <div className="min-h-screen bg-background bg-gradient-glow flex items-center justify-center p-4">
         <Card className="w-full max-w-md shadow-card border-border/50">
@@ -221,10 +218,10 @@ export default function Auth() {
             </div>
             <div>
               <CardTitle className="text-2xl font-display">
-                {isRecoveryFlow ? "Reset Password" : "Welcome!"}
+                {isPasswordRecovery ? "Reset Password" : "Welcome!"}
               </CardTitle>
               <CardDescription>
-                {isRecoveryFlow 
+                {isPasswordRecovery 
                   ? "Enter your new password below" 
                   : "Set your password to complete your account setup"}
               </CardDescription>
