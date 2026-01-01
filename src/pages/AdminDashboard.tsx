@@ -14,7 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Loader2, Users, Shield, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Loader2, Users, Shield, ShieldCheck, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { format } from "date-fns";
 
 interface UserData {
@@ -25,6 +25,9 @@ interface UserData {
   role: string;
 }
 
+type SortColumn = 'email' | 'role' | 'created_at' | 'last_sign_in_at';
+type SortDirection = 'asc' | 'desc';
+
 const AdminDashboard = () => {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useIsAdmin();
@@ -32,6 +35,35 @@ const AdminDashboard = () => {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sortColumn, setSortColumn] = useState<SortColumn>('created_at');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (column: SortColumn) => {
+    if (sortColumn !== column) return <ArrowUpDown className="w-4 h-4 ml-1" />;
+    return sortDirection === 'asc' 
+      ? <ArrowUp className="w-4 h-4 ml-1" /> 
+      : <ArrowDown className="w-4 h-4 ml-1" />;
+  };
+
+  const sortedUsers = [...users].sort((a, b) => {
+    let aVal: string | null = a[sortColumn];
+    let bVal: string | null = b[sortColumn];
+    
+    if (aVal === null) return sortDirection === 'asc' ? 1 : -1;
+    if (bVal === null) return sortDirection === 'asc' ? -1 : 1;
+    
+    const comparison = aVal.localeCompare(bVal);
+    return sortDirection === 'asc' ? comparison : -comparison;
+  });
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -198,14 +230,42 @@ const AdminDashboard = () => {
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent">
-                      <TableHead>Email</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead>Last Sign In</TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:text-foreground transition-colors"
+                        onClick={() => handleSort('email')}
+                      >
+                        <div className="flex items-center">
+                          Email {getSortIcon('email')}
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:text-foreground transition-colors"
+                        onClick={() => handleSort('role')}
+                      >
+                        <div className="flex items-center">
+                          Role {getSortIcon('role')}
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:text-foreground transition-colors"
+                        onClick={() => handleSort('created_at')}
+                      >
+                        <div className="flex items-center">
+                          Created {getSortIcon('created_at')}
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:text-foreground transition-colors"
+                        onClick={() => handleSort('last_sign_in_at')}
+                      >
+                        <div className="flex items-center">
+                          Last Sign In {getSortIcon('last_sign_in_at')}
+                        </div>
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {users.map((userData) => (
+                    {sortedUsers.map((userData) => (
                       <TableRow key={userData.id}>
                         <TableCell className="font-medium">
                           {userData.email}
