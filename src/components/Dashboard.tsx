@@ -54,6 +54,7 @@ export function Dashboard() {
       const { data, error } = await supabase
         .from("activities")
         .select("*")
+        .eq("user_id", user.id)
         .order("activity_date", { ascending: true });
       
       if (error) {
