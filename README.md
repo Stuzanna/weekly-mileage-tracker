@@ -4,6 +4,8 @@
 
 A weekly mileage tracking application for running activities. Users can upload Strava CSV exports to visualize running statistics, weekly/monthly trends, and activity data. Built with React, TypeScript, Vite, and Supabase.
 
+![home](/img/home.png)
+
 ## Project info
 
 See '/database-setup' for information on how to prepare a back-end for storage.
