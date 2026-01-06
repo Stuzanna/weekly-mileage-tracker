@@ -91,7 +91,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  admin_emails TEXT[] := ARRAY['smould1011@gmail.com'];
+  admin_emails TEXT[] := ARRAY['admin@email.com'];
 BEGIN
   IF NEW.email = ANY(admin_emails) THEN
     INSERT INTO public.user_roles (user_id, role)
