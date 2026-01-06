@@ -1,65 +1,12 @@
 # Welcome to your Lovable project
 
+## Project Overview
+
+A weekly mileage tracking application for running activities. Users can upload Strava CSV exports to visualize running statistics, weekly/monthly trends, and activity data. Built with React, TypeScript, Vite, and Supabase.
+
 ## Project info
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
-
 See '/database-setup' for information on how to prepare a back-end for storage.
-
-Changes that would need to make public:
-
-- Remove personal activity data, `data/activities.csv`
-- API is public not a secret, no change required
-
-## Deployment
-
-Deployed on Vercel, uses the `production` branch at time of writing. Check the project environment settings for actual configuration.
-
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
 
 ## What technologies are used for this project?
 
@@ -71,14 +18,39 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
-## How can I deploy this project?
+## Development Commands
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+```bash
+# Install dependencies
+npm i
 
-## Can I connect a custom domain to my Lovable project?
+# Start development server (runs on port 8080)
+npm run dev
 
-Yes, you can!
+# Build for production
+npm run build
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+# Build in development mode
+npm run build:dev
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+# Lint code
+npm run lint
+
+# Preview production build
+npm run preview
+```
+
+## Deployment
+
+Deployed on Vercel, uses the `production` branch at time of writing. Check the project environment settings for actual configuration.
+
+## Tech Stack
+
+- **Frontend**: React 18 + TypeScript
+- **Build Tool**: Vite with SWC plugin
+- **Styling**: Tailwind CSS + shadcn/ui components
+- **Backend**: Supabase (PostgreSQL with Row Level Security)
+- **State Management**: React Context (AuthContext) + TanStack Query
+- **Routing**: React Router v6
+- **Charts**: Recharts
+- **Date Handling**: date-fns
